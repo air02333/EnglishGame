@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>國中英文單字記憶王 - 視覺進化版</title>
+    <style>
+        :root { 
+            --primary: #4a90e2; 
+            --secondary: #f39c12; 
+            --hanlin-color: #8b5cf6;
+            --bg: #0f172a; 
+            --card-bg: #1e293b; 
+            --success: #22c55e; 
+        }
+
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background: radial-gradient(circle, #1e293b, #0f172a);
+            color: white; margin: 0; padding: 10px; box-sizing: border-box;
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; -webkit-tap-highlight-color: transparent;
+        }
+
+        #game-container {
+            width: 100%; max-width: 500px;
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px);
+            padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 15px; text-align: center; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        /* --- 按鈕基礎樣式 --- */
+        .btn {
+            display: block; width: 100%; margin: 12px 0; padding: 16px;
+            font-size: 1rem; color: white; border: none; border-radius: 12px; 
+            cursor: pointer; font-weight: bold; position: relative;
+            transition: all 0.3s ease; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* --- 懸停、發光、抖動效果 --- */
+        .btn:hover {
+            transform: scale(1.03); /* 懸停放大 */
+            filter: brightness(1.1);
+            animation: shake 0.5s infinite; /* 懸停抖動 */
+        }
+
+        @keyframes shake {
+            0% { transform: scale(1.03) rotate(0deg); }
+            25% { transform: scale(1.03) rotate(0.5deg); }
+            50% { transform: scale(1.03) rotate(0deg); }
+            75% { transform: scale(1.03) rotate(-0.5deg); }
+            100% { transform: scale(1.03) rotate(0deg); }
+        }
+
+        /* 各版本發光與顏色 */
+        .btn-kanshiun { 
+            background: linear-gradient(135deg, #0ea5e9, #0284c7); 
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); 
+        }
+        .btn-kanshiun:hover { box-shadow: 0 0 25px rgba(14, 165, 233, 0.8); }
+
+        .btn-nani { 
+            background: linear-gradient(135deg, #f59e0b, #d97706); 
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); 
+        }
+        .btn-nani:hover { box-shadow: 0 0 25px rgba(245, 158, 11, 0.8); }
+
+        .btn-hanlin { 
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9); 
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); 
+        }
+        .btn-hanlin:hover { box-shadow: 0 0 25px rgba(139, 92, 246, 0.8); }
+
+        .btn-secondary { 
+            background: linear-gradient(135deg, #64748b, #475569); 
+            box-shadow: 0 0 10px rgba(100, 116, 139, 0.3);
+        }
+
+        /* --- 遊戲卡片與其他樣式保持優化 --- */
+        #game-board { display: grid; grid-template-columns: repeat(4, 1fr); grid-gap: 8px; margin: 15px 0; }
+        .card { aspect-ratio: 1/1; position: relative; transform-style: preserve-3d; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .card.flipped { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; justify-content: center; align-items: center;
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.8rem; font-weight: bold; padding: 4px; box-sizing: border-box;
+            word-break: break-word; text-align: center;
+        }
+        .card-front { background: #334155; }
+        .card-front img { width: 85%; height: 85%; object-fit: contain; }
+        .card-back { background: white; color: #1e293b; transform: rotateY(180deg); }
+        .card.matched .card-back { background: #dcfce7; color: #166534; border: 2px solid var(--success); }
+        
+        .rank-section { margin-top: 25px; text-align: left; }
+        .rank-header { background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 10px; margin-bottom: 5px; font-size: 0.85rem; display: flex; justify-content: space-between; cursor: pointer; }
+        .rank-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; background: rgba(0,0,0,0.3); border-radius: 0 0 10px 10px; }
+        .rank-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+        .rank-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .stats { font-size: 0.9rem; color: #facc15; margin-bottom: 10px; font-weight: bold; }
+        .mode-tag { font-size: 0.75rem; padding: 3px 10px; border-radius: 15px; margin-bottom: 10px; display: inline-block; color: white; }
+        .practice-tag { background: #0ea5e9; }
+        .match-tag { background: #f43f5e; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="view-lobby">
+        <h1>📖 英文單字記憶王</h1>
+        
+        <button class="btn btn-kanshiun" onclick="showGrade('B1')">國中一年級(下)英文單字康軒版</button>
+        <button class="btn btn-nani" onclick="showGrade('B4-Nani')">國中二年級下英文單字南一版</button>
+        <button class="btn btn-hanlin" onclick="showGrade('B4-HanLin')">國中二年級下英文單字翰林版</button>
+        
+        <div class="rank-section">
+            <h3 style="font-size: 0.9rem; color: #94a3b8; border-left: 4px solid var(--primary); padding-left: 8px;">🏆 本機排行榜</h3>
+            <div id="rank-list-area"></div>
+        </div>
+    </div>
+
+    <div id="view-mode" class="hidden">
+        <h2 style="text-align:center">選擇模式</h2>
+        <button class="btn btn-kanshiun" onclick="setMode('practice')">🔍 練習模式</button>
+        <button class="btn match-tag" style="background:#f43f5e" onclick="setMode('match')">🔥 比賽模式</button>
+        <button class="btn btn-secondary" onclick="goBack('lobby')">返回大廳</button>
+    </div>
+
+    <div id="view-lessons" class="hidden">
+        <h2 style="text-align:center">選擇課別</h2>
+        <div id="lesson-buttons"></div>
+        <button class="btn btn-secondary" onclick="goBack('mode')">返回</button>
+    </div>
+
+    <div id="view-groups" class="hidden">
+        <h2 style="text-align:center">選擇組別</h2>
+        <div id="group-buttons"></div>
+        <button class="btn btn-secondary" onclick="goBack('lessons')">返回</button>
+    </div>
+
+    <div id="view-game" class="hidden">
+        <div id="mode-indicator" class="mode-tag"></div>
+        <div class="stats">
+            <span id="timer-display">0s</span> | 進度 <span id="progress-display">0/0</span>
+        </div>
+        <div id="game-board"></div>
+        <button class="btn btn-secondary" style="padding:10px;" onclick="location.reload()">放棄並退出</button>
+    </div>
+</div>
+
+<script>
+    const logoUrl = "logo.png";
+    const AD_EMOJIS = ["🎁", "🚀", "💎", "🌈", "🍀", "🎈", "⭐️"];
+
+    // 資料庫 (已包含 B1, B4-Nani, B4-HanLin)
+    const VOCAB = {
+        "B1": {
+            "Lesson 1": [{"en":"get up","cn":"起床"},{"en":"teeth","cn":"牙齒"},{"en":"face","cn":"臉"},{"en":"exercise","cn":"運動"},{"en":"breakfast","cn":"早餐"},{"en":"bath","cn":"洗澡"},{"en":"homework","cn":"作業"},{"en":"baseball","cn":"棒球"},{"en":"soccer","cn":"足球"},{"en":"video game","cn":"電玩"},{"en":"practice","cn":"練習"},{"en":"every","cn":"每一"},{"en":"team","cn":"隊伍"},{"en":"know","cn":"知道"},{"en":"player","cn":"選手"},{"en":"grade","cn":"成績"},{"en":"test","cn":"考試"},{"en":"study","cn":"研讀"},{"en":"either","cn":"也(否)"},{"en":"must","cn":"必須"},{"en":"enjoy","cn":"享受"},{"en":"then","cn":"然後"},{"en":"ticket","cn":"票"},{"en":"together","cn":"一起"},{"en":"how much","cn":"多少"},{"en":"hundred","cn":"百"},{"en":"dollar","cn":"元"},{"en":"badminton","cn":"羽球"},{"en":"tennis","cn":"網球"},{"en":"ask","cn":"問"},{"en":"happen","cn":"發生"},{"en":"fast","cn":"快速"},{"en":"move","cn":"移動"},{"en":"hit","cn":"打擊"},{"en":"fun","cn":"樂趣"},{"en":"win","cn":"贏"},{"en":"lose","cn":"輸"},{"en":"side","cn":"邊"},{"en":"touch","cn":"觸碰"},{"en":"last","cn":"最後"},{"en":"point","cn":"得分"}]
+        },
+        "B4-Nani": {
+            "Lesson 1": [{"en":"thin","cn":"瘦的"},{"en":"side","cn":"邊"},{"en":"trash can","cn":"垃圾桶"},{"en":"quiet","cn":"安靜的"},{"en":"pretty","cn":"漂亮的"},{"en":"soup","cn":"湯"},{"en":"sandwich","cn":"三明治"},{"en":"salad","cn":"沙拉"},{"en":"miss","cn":"想念"},{"en":"than","cn":"比"},{"en":"hers","cn":"她的"},{"en":"bath","cn":"洗澡"},{"en":"clothes","cn":"衣服"},{"en":"sock","cn":"襪子"},{"en":"sweater","cn":"毛衣"},{"en":"already","cn":"已經"},{"en":"maybe","cn":"也許"},{"en":"lonely","cn":"寂寞的"},{"en":"blow","cn":"吹"},{"en":"fat","cn":"胖的"},{"en":"towel","cn":"毛巾"},{"en":"paw","cn":"腳爪"},{"en":"T-shirt","cn":"T恤"},{"en":"skirt","cn":"裙子"},{"en":"shorts","cn":"短褲"},{"en":"shirt","cn":"襯衫"},{"en":"dress","cn":"洋裝"},{"en":"jeans","cn":"牛仔褲"},{"en":"pants","cn":"長褲"},{"en":"coat","cn":"大衣"},{"en":"tie","cn":"領帶"},{"en":"belt","cn":"腰帶"},{"en":"glove","cn":"手套"},{"en":"hat","cn":"帽子"}],
+            "Lesson 2": [{"en":"ice cream","cn":"冰淇淋"},{"en":"sound","cn":"聽起來"},{"en":"cut","cn":"切"},{"en":"smell","cn":"聞起來"},{"en":"tomato","cn":"番茄"},{"en":"cheese","cn":"起司"},{"en":"stomach","cn":"胃"},{"en":"feel","cn":"感覺"},{"en":"seller","cn":"賣家"},{"en":"bean","cn":"豆子"},{"en":"bun","cn":"小圓麵包"},{"en":"butter","cn":"奶油"},{"en":"cookie","cn":"餅乾"},{"en":"French fries","cn":"薯條"},{"en":"hot dog","cn":"熱狗"},{"en":"popcorn","cn":"爆米花"},{"en":"ham","cn":"火腿"},{"en":"steak","cn":"牛排"},{"en":"toast","cn":"烤麵包"},{"en":"hold","cn":"舉辦"},{"en":"main","cn":"主要的"},{"en":"square","cn":"廣場"},{"en":"ring","cn":"響鈴"},{"en":"bell","cn":"鐘/鈴"},{"en":"touch","cn":"觸摸"},{"en":"deal","cn":"交易"},{"en":"clap","cn":"拍手"},{"en":"shout","cn":"喊叫"},{"en":"agree","cn":"同意"},{"en":"shake hands","cn":"握手"},{"en":"smile","cn":"微笑"},{"en":"village","cn":"村莊"},{"en":"traditional","cn":"傳統的"},{"en":"on display","cn":"展示"},{"en":"buyer","cn":"買家"}],
+            "Lesson 3": [{"en":"slowly","cn":"緩慢地"},{"en":"loudly","cn":"大聲地"},{"en":"classmate","cn":"同學"},{"en":"neighbor","cn":"鄰居"},{"en":"giant","cn":"巨大的"},{"en":"lucky","cn":"幸運的"},{"en":"hide","cn":"躲藏"},{"en":"rock","cn":"岩石"},{"en":"a while","cn":"一會兒"},{"en":"shine","cn":"照耀"},{"en":"tail","cn":"尾巴"},{"en":"brave","cn":"勇敢的"},{"en":"somewhere","cn":"某處"},{"en":"count on","cn":"依靠"},{"en":"tuna","cn":"鮪魚"},{"en":"alone","cn":"單獨的"},{"en":"bottle cap","cn":"瓶蓋"},{"en":"brush","cn":"刷子"},{"en":"button","cn":"鈕扣"},{"en":"newspaper","cn":"報紙"},{"en":"pot","cn":"鍋"},{"en":"bench","cn":"長凳"},{"en":"mask","cn":"口罩"},{"en":"basket","cn":"籃子"},{"en":"plastic","cn":"塑膠的"},{"en":"straw","cn":"吸管"},{"en":"used to","cn":"過去經常"},{"en":"noisy","cn":"吵雜的"},{"en":"chance","cn":"機會"},{"en":"oil","cn":"油"},{"en":"trick","cn":"誘騙"},{"en":"kill","cn":"殺害"},{"en":"wastewater","cn":"廢水"},{"en":"breathe","cn":"呼吸"},{"en":"sincerely","cn":"誠摯地"}],
+            "Lesson 4": [{"en":"America","cn":"美國"},{"en":"a little","cn":"一些"},{"en":"watermelon","cn":"西瓜"},{"en":"popular","cn":"受歡迎的"},{"en":"guava","cn":"芭樂"},{"en":"papaya","cn":"木瓜"},{"en":"peach","cn":"桃子"},{"en":"mouth","cn":"嘴巴"},{"en":"supermarket","cn":"超市"},{"en":"mango","cn":"芒果"},{"en":"paradise","cn":"天堂"},{"en":"climate","cn":"氣候"},{"en":"skillful","cn":"熟練的"},{"en":"strawberry","cn":"草莓"},{"en":"lemon","cn":"檸檬"},{"en":"pear","cn":"梨子"},{"en":"grape","cn":"葡萄"},{"en":"sugar","cn":"糖"},{"en":"quarter","cn":"1/4"},{"en":"excellent","cn":"極好的"},{"en":"several","cn":"幾個的"},{"en":"successfully","cn":"成功地"},{"en":"seed","cn":"種子"},{"en":"abroad","cn":"到國外"},{"en":"improve","cn":"改善"}],
+            "Lesson 5": [{"en":"science","cn":"科學"},{"en":"strange","cn":"奇怪的"},{"en":"through","cn":"穿越"},{"en":"noise","cn":"噪音"},{"en":"although","cn":"雖然"},{"en":"both","cn":"兩者都"},{"en":"if","cn":"如果"},{"en":"anyone","cn":"任何人"},{"en":"answer","cn":"答案"},{"en":"sign","cn":"告示"},{"en":"body","cn":"身體"},{"en":"change","cn":"改變"},{"en":"copy","cn":"模仿"},{"en":"head","cn":"頭部"},{"en":"tunnel","cn":"隧道"},{"en":"design","cn":"設計"},{"en":"beak","cn":"嘴/喙"},{"en":"neck","cn":"脖子"},{"en":"hair","cn":"頭髮"},{"en":"sharp","cn":"尖銳的"},{"en":"nail","cn":"指甲"},{"en":"lip","cn":"嘴唇"},{"en":"nose","cn":"鼻子"},{"en":"knee","cn":"膝蓋"},{"en":"leg","cn":"腿"},{"en":"nature","cn":"大自然"},{"en":"reason","cn":"原因"},{"en":"teeth","cn":"牙齒"},{"en":"cover","cn":"覆蓋"},{"en":"tip","cn":"尖端"},{"en":"borrow","cn":"借用"},{"en":"shark","cn":"鯊魚"},{"en":"skin","cn":"皮膚"},{"en":"scale","cn":"魚鱗"},{"en":"swimsuit","cn":"泳衣"}],
+            "Lesson 6": [{"en":"vacation","cn":"假期"},{"en":"belong to","cn":"屬於"},{"en":"history","cn":"歷史"},{"en":"uniform","cn":"制服"},{"en":"the public","cn":"民眾"},{"en":"glad","cn":"高興的"},{"en":"perhaps","cn":"也許"},{"en":"key chain","cn":"鑰匙圈"},{"en":"crow","cn":"烏鴉"},{"en":"raven","cn":"渡鴉"},{"en":"mailman","cn":"郵差"},{"en":"voice actor","cn":"配音員"},{"en":"driver","cn":"駕駛員"},{"en":"engineer","cn":"工程師"},{"en":"comic","cn":"漫畫"},{"en":"writer","cn":"作家"},{"en":"soldier","cn":"軍人"},{"en":"dark","cn":"深色的"},{"en":"ugly","cn":"醜的"},{"en":"however","cn":"然而"},{"en":"follow","cn":"聽從"},{"en":"quite","cn":"相當"},{"en":"healthy","cn":"健康的"},{"en":"part","cn":"一部分"},{"en":"be able to","cn":"能夠"},{"en":"ground","cn":"地面"},{"en":"stair","cn":"樓梯"},{"en":"high","cn":"高的"},{"en":"wall","cn":"牆壁"},{"en":"legend","cn":"傳說"},{"en":"kingdom","cn":"王國"},{"en":"keeper","cn":"飼養者"},{"en":"protector","cn":"保護者"},{"en":"tradition","cn":"傳統"},{"en":"honor","cn":"榮譽"}]
+        },
+        "B4-HanLin": {
+            "Lesson 1": [{"en":"foreign","cn":"外國的"},{"en":"friendly","cn":"友善的"},{"en":"convenient","cn":"方便的"},{"en":"pork","cn":"豬肉"},{"en":"beef","cn":"牛肉"},{"en":"delicious","cn":"美味的"},{"en":"feel","cn":"感到"},{"en":"steak","cn":"牛排"},{"en":"menu","cn":"菜單"},{"en":"waitress","cn":"女服務生"},{"en":"ham","cn":"火腿"},{"en":"butter","cn":"奶油"},{"en":"medium","cn":"中等的"},{"en":"meat","cn":"肉"},{"en":"smell","cn":"聞起來"},{"en":"taste","cn":"嚐起來"},{"en":"as...as...","cn":"如同"},{"en":"get around","cn":"到處旅行"},{"en":"dish","cn":"菜餚"},{"en":"more","cn":"更"},{"en":"get","cn":"變成"},{"en":"sound","cn":"聽起來"},{"en":"top","cn":"頂部"},{"en":"French fries","cn":"薯條"},{"en":"knife","cn":"刀子"},{"en":"fork","cn":"叉子"},{"en":"noodle","cn":"麵"},{"en":"chopsticks","cn":"筷子"},{"en":"spoon","cn":"湯匙"},{"en":"fried chicken","cn":"炸雞"},{"en":"waiter","cn":"男服務生"},{"en":"strawberry","cn":"草莓"},{"en":"bun","cn":"小圓麵包"},{"en":"earth","cn":"地球"},{"en":"bring","cn":"帶來"},{"en":"smile","cn":"微笑"},{"en":"land","cn":"陸地"},{"en":"rock","cn":"岩石"},{"en":"shape","cn":"形狀"},{"en":"clear","cn":"清楚的"},{"en":"comfortable","cn":"舒適的"},{"en":"fill","cn":"裝滿"},{"en":"pack","cn":"打包"}],
+            "Lesson 2": [{"en":"grass","cn":"草地"},{"en":"red fire ant","cn":"紅火蟻"},{"en":"dangerous","cn":"危險的"},{"en":"bite","cn":"咬"},{"en":"death","cn":"死亡"},{"en":"kick","cn":"踢"},{"en":"themselves","cn":"他們自己"},{"en":"kill","cn":"殺死"},{"en":"stay away from","cn":"遠離"},{"en":"agree","cn":"同意"},{"en":"circle","cn":"圓圈"},{"en":"myself","cn":"我自己"},{"en":"snake","cn":"蛇"},{"en":"wet","cn":"濕的"},{"en":"scary","cn":"可怕的"},{"en":"deep","cn":"深的"},{"en":"true","cn":"真實的"},{"en":"most","cn":"最"},{"en":"give a hand","cn":"幫助"},{"en":"spider","cn":"蜘蛛"},{"en":"gram","cn":"公克"},{"en":"insect","cn":"昆蟲"},{"en":"bee","cn":"蜜蜂"},{"en":"inch","cn":"吋"},{"en":"wide","cn":"寬的"},{"en":"kilogram","cn":"公斤"},{"en":"nature","cn":"大自然"},{"en":"below","cn":"在下面"},{"en":"sea level","cn":"海平面"},{"en":"mile","cn":"英里"},{"en":"feet","cn":"英尺"},{"en":"smart","cn":"聰明的"},{"en":"traffic","cn":"交通"},{"en":"appear","cn":"似乎"},{"en":"air","cn":"空氣"},{"en":"far","cn":"遠"},{"en":"slow","cn":"慢"},{"en":"light","cn":"光"},{"en":"cross","cn":"穿越"}],
+            "Lesson 3": [{"en":"loudly","cn":"大聲地"},{"en":"hard","cn":"努力/困難"},{"en":"well","cn":"好地"},{"en":"share","cn":"分享"},{"en":"weak","cn":"虛弱的"},{"en":"hen","cn":"母雞"},{"en":"dirty","cn":"髒的"},{"en":"bow","cn":"鞠躬"},{"en":"without","cn":"沒有"},{"en":"quickly","cn":"快速地"},{"en":"web page","cn":"網頁"},{"en":"service","cn":"服務"},{"en":"wise","cn":"聰明的"},{"en":"cheer","cn":"歡呼"},{"en":"celebrate","cn":"慶祝"},{"en":"mean","cn":"刻薄的"},{"en":"make","cn":"使"},{"en":"break","cn":"休息"},{"en":"over","cn":"超過"},{"en":"treat","cn":"對待"},{"en":"have","cn":"使"},{"en":"grape","cn":"葡萄"},{"en":"goose","cn":"鵝"},{"en":"duck","cn":"鴨"},{"en":"goat","cn":"山羊"},{"en":"sheep","cn":"綿羊"},{"en":"peach","cn":"桃子"},{"en":"turtle","cn":"烏龜"},{"en":"pear","cn":"梨子"},{"en":"papaya","cn":"木瓜"},{"en":"vegetable","cn":"蔬菜"},{"en":"guava","cn":"芭樂"},{"en":"tomato","cn":"番茄"},{"en":"watermelon","cn":"西瓜"},{"en":"American","cn":"美國人"},{"en":"million","cn":"百萬"},{"en":"pound","cn":"磅"},{"en":"pick","cn":"採摘"},{"en":"bean","cn":"豆子"},{"en":"cent","cn":"美分"},{"en":"chance","cn":"機會"},{"en":"choose","cn":"選擇"}],
+            "Lesson 4": [{"en":"typhoon","cn":"颱風"},{"en":"blow","cn":"吹"},{"en":"rose","cn":"玫瑰"},{"en":"balcony","cn":"陽台"},{"en":"must","cn":"必須"},{"en":"prepare","cn":"準備"},{"en":"should","cn":"應該"},{"en":"candle","cn":"蠟燭"},{"en":"radio","cn":"收音機"},{"en":"news","cn":"新聞"},{"en":"if","cn":"如果"},{"en":"or","cn":"否則"},{"en":"have to","cn":"必須"},{"en":"go out","cn":"熄滅"},{"en":"train","cn":"訓練"},{"en":"face","cn":"面對"},{"en":"try best","cn":"盡力"},{"en":"turn on","cn":"打開"},{"en":"latest","cn":"最新的"},{"en":"star","cn":"星星"},{"en":"shine","cn":"閃耀"},{"en":"giant","cn":"巨大的"},{"en":"wave","cn":"浪"},{"en":"rainbow","cn":"彩虹"},{"en":"pretty","cn":"漂亮的"},{"en":"garden","cn":"花園"},{"en":"frog","cn":"青蛙"},{"en":"noise","cn":"噪音"},{"en":"pond","cn":"池塘"},{"en":"noisy","cn":"吵雜的"},{"en":"earthquake","cn":"地震"},{"en":"bravely","cn":"勇敢地"},{"en":"sharp","cn":"尖銳的"},{"en":"reach","cn":"到達"},{"en":"space","cn":"空間"},{"en":"size","cn":"大小"},{"en":"as","cn":"如同"},{"en":"times","cn":"倍"}],
+            "Lesson 5": [{"en":"although","cn":"雖然"},{"en":"matter","cn":"問題"},{"en":"sore throat","cn":"喉嚨痛"},{"en":"explain","cn":"解釋"},{"en":"cough","cn":"咳嗽"},{"en":"probably","cn":"可能"},{"en":"take care of","cn":"照顧"},{"en":"noon","cn":"中午"},{"en":"both","cn":"兩者"},{"en":"medicine","cn":"藥"},{"en":"honey","cn":"蜂蜜"},{"en":"lemon","cn":"檸檬"},{"en":"useful","cn":"有用的"},{"en":"stand","cn":"攤位"},{"en":"feel like","cn":"想要"},{"en":"cold","cn":"感冒"},{"en":"well","cn":"健康的"},{"en":"treat","cn":"治療"},{"en":"head","cn":"頭"},{"en":"headache","cn":"頭痛"},{"en":"stomachache","cn":"胃痛"},{"en":"fever","cn":"發燒"},{"en":"runny nose","cn":"流鼻水"},{"en":"knee","cn":"膝蓋"},{"en":"nail","cn":"指甲"},{"en":"finger","cn":"手指"},{"en":"neck","cn":"脖子"},{"en":"shoulder","cn":"肩膀"},{"en":"bakery","cn":"麵包店"},{"en":"common","cn":"常見的"},{"en":"actually","cn":"事實上"},{"en":"helpful","cn":"有幫助的"},{"en":"root","cn":"根"},{"en":"reason","cn":"原因"},{"en":"power up","cn":"增強"},{"en":"sweet","cn":"甜食"},{"en":"sharp","cn":"敏銳的"}],
+            "Lesson 6": [{"en":"pass","cn":"傳遞"},{"en":"throw","cn":"丟"},{"en":"point","cn":"得分"},{"en":"win","cn":"贏"},{"en":"until","cn":"直到"},{"en":"member","cn":"成員"},{"en":"group","cn":"團體"},{"en":"fail","cn":"失敗"},{"en":"test","cn":"考試"},{"en":"afraid","cn":"害怕的"},{"en":"forget","cn":"忘記"},{"en":"fresh","cn":"新鮮的"},{"en":"count in","cn":"算入"},{"en":"begin","cn":"開始"},{"en":"meeting","cn":"會議"},{"en":"come on","cn":"快點"},{"en":"excuse","cn":"藉口"},{"en":"around the corner","cn":"即將"},{"en":"grade","cn":"成績"},{"en":"hold back","cn":"阻止"},{"en":"few","cn":"很少"},{"en":"simple","cn":"簡單的"},{"en":"expect","cn":"期望"},{"en":"mistake","cn":"錯誤"},{"en":"angle","cn":"角度"},{"en":"allow","cn":"允許"},{"en":"laugh","cn":"笑"},{"en":"keep in mind","cn":"記住"},{"en":"honest","cn":"誠實的"},{"en":"lead to","cn":"導致"},{"en":"push","cn":"推動"},{"en":"excellent","cn":"優秀的"},{"en":"be able to","cn":"能夠"},{"en":"define","cn":"定義"},{"en":"matter","cn":"重要"},{"en":"picture","cn":"想像"},{"en":"as for","cn":"至於"},{"en":"to the full","cn":"盡可能"}]
+        }
+    };
+
+    let gameState = { grade: '', mode: '', lesson: '', currentWords: [], currentIndex: 0, timer: null, seconds: 0, flipped: [], lock: false };
+
+    function initRanks() {
+        const area = document.getElementById('rank-list-area'); area.innerHTML = '';
+        const gradeKey = gameState.grade || 'B1';
+        const currentData = VOCAB[gradeKey];
+        Object.keys(currentData).forEach(lesson => {
+            const records = JSON.parse(localStorage.getItem(`rank_${gradeKey}_${lesson}`) || '[]');
+            const container = document.createElement('div');
+            container.innerHTML = `<div class="rank-header" onclick="toggleRank(this)"><span>${gradeKey} - ${lesson}</span><span>▼</span></div><div class="rank-content"><table class="rank-table">${records.length ? records.slice(0,3).map((r,i)=>`<tr><td>#${i+1}</td><td>${r.name}</td><td align="right">${r.time}s</td></tr>`).join(''):'<tr><td colspan="3" align="center">暫無紀錄</td></tr>'}</table></div>`;
+            area.appendChild(container);
+        });
+    }
+
+    function toggleRank(header) { const content = header.nextElementSibling; content.style.maxHeight = content.style.maxHeight ? null : "150px"; header.lastChild.innerText = content.style.maxHeight ? "▲" : "▼"; }
+
+    function showGrade(g) { gameState.grade = g; goBack('mode'); initRanks(); }
+
+    function setMode(m) {
+        gameState.mode = m; goBack('lessons');
+        const area = document.getElementById('lesson-buttons'); area.innerHTML = '';
+        const btnClass = gameState.grade === 'B4-HanLin' ? 'btn-hanlin' : (gameState.grade === 'B4-Nani' ? 'btn-nani' : 'btn-kanshiun');
+        Object.keys(VOCAB[gameState.grade]).forEach(l => {
+            const b = document.createElement('button'); b.className = `btn ${btnClass}`; b.innerText = l; b.onclick = () => selectLesson(l); area.appendChild(b);
+        });
+    }
+
+    function selectLesson(l) {
+        gameState.lesson = l; const words = VOCAB[gameState.grade][l];
+        const btnClass = gameState.grade === 'B4-HanLin' ? 'btn-hanlin' : (gameState.grade === 'B4-Nani' ? 'btn-nani' : 'btn-kanshiun');
+        if (gameState.mode === 'practice') {
+            goBack('groups'); const area = document.getElementById('group-buttons'); area.innerHTML = '';
+            const num = Math.ceil(words.length / 8);
+            for (let i = 0; i < num; i++) {
+                const b = document.createElement('button'); b.className = `btn ${btnClass}`; b.innerText = `第 ${i+1} 組 (${i*8+1}~${Math.min((i+1)*8, words.length)})`;
+                b.onclick = () => startGame(words.slice(i*8, (i+1)*8)); area.appendChild(b);
+            }
+        } else { startGame(words); }
+    }
+
+    function goBack(target) { document.querySelectorAll('#game-container > div').forEach(d => d.classList.add('hidden')); document.getElementById(`view-${target}`).classList.remove('hidden'); }
+
+    function startGame(words) {
+        gameState.currentWords = words; gameState.currentIndex = 0; gameState.seconds = 0;
+        goBack('game');
+        const tag = document.getElementById('mode-indicator');
+        tag.innerText = gameState.mode === 'practice' ? '🔍 練習模式' : '🔥 比賽模式';
+        tag.className = `mode-tag ${gameState.mode === 'practice' ? 'practice-tag' : 'match-tag'}`;
+        if (gameState.mode === 'match') {
+            clearInterval(gameState.timer);
+            gameState.timer = setInterval(() => { gameState.seconds++; document.getElementById('timer-display').innerText = `${gameState.seconds}s`; }, 1000);
+        } else { document.getElementById('timer-display').innerText = '練習中'; }
+        loadRound();
+    }
+
+    function loadRound() {
+        const board = document.getElementById('game-board'); board.innerHTML = "";
+        gameState.flipped = []; gameState.lock = false;
+        let pool = [], items = [];
+        if (gameState.mode === 'match') { items = gameState.currentWords.slice(gameState.currentIndex, gameState.currentIndex + 8); gameState.currentIndex += 8; }
+        else { items = gameState.currentWords; }
+
+        items.forEach((w, i) => { pool.push({ id: i, txt: w.en, type: 'e' }, { id: i, txt: w.cn, type: 'c' }); });
+
+        let emojiIdx = 0;
+        while(pool.length < 16) {
+            let emoji = AD_EMOJIS[emojiIdx % AD_EMOJIS.length];
+            pool.push({ id: 99+emojiIdx, txt: `<span class="emoji-item">${emoji}</span>`, type: 'a' }, { id: 99+emojiIdx, txt: `<span class="emoji-item">${emoji}</span>`, type: 'b' });
+            emojiIdx++;
+        }
+
+        pool.sort(() => Math.random() - 0.5);
+        pool.forEach(data => {
+            const card = document.createElement('div'); card.className = 'card';
+            const len = data.txt.length;
+            const fontSize = len > 15 ? '0.55rem' : (len > 10 ? '0.65rem' : (len > 7 ? '0.75rem' : '0.85rem'));
+            card.innerHTML = `<div class="card-front"><img src="${logoUrl}" onerror="this.src='https://via.placeholder.com/80?text=LOGO'"></div><div class="card-back" style="font-size:${fontSize}">${data.txt}</div>`;
+            card.onclick = () => flip(card, data); board.appendChild(card);
+        });
+        const total = gameState.mode === 'match' ? gameState.currentWords.length : items.length;
+        document.getElementById('progress-display').innerText = `${Math.min(gameState.currentIndex || items.length, total)}/${total}`;
+    }
+
+    function flip(card, data) {
+        if (gameState.lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+        card.classList.add('flipped'); gameState.flipped.push({ card, data });
+        if (gameState.flipped.length === 2) {
+            gameState.lock = true; const [a, b] = gameState.flipped;
+            if (a.data.id === b.data.id && a.data.type !== b.data.type) {
+                setTimeout(() => { a.card.classList.add('matched'); b.card.classList.add('matched'); gameState.flipped = []; gameState.lock = false; checkWin(); }, 400);
+            } else {
+                setTimeout(() => { a.card.classList.remove('flipped'); b.card.classList.remove('flipped'); gameState.flipped = []; gameState.lock = false; }, 700);
+            }
+        }
+    }
+
+    function checkWin() {
+        if (document.querySelectorAll('.card:not(.matched)').length === 0) {
+            if (gameState.mode === 'match' && gameState.currentIndex < gameState.currentWords.length) {
+                setTimeout(() => { alert("本組完成！繼續挑戰下一組。"); loadRound(); }, 400);
+            } else { setTimeout(endGame, 400); }
+        }
+    }
+
+    function endGame() {
+        clearInterval(gameState.timer);
+        if (gameState.mode === 'match') {
+            const name = prompt(`🎉 恭喜完成！耗時：${gameState.seconds} 秒\n請輸入大名登入排行榜：`);
+            if (name) {
+                const key = `rank_${gameState.grade}_${gameState.lesson}`;
+                let records = JSON.parse(localStorage.getItem(key) || '[]');
+                records.push({ name, time: gameState.seconds });
+                records.sort((a, b) => a.time - b.time);
+                localStorage.setItem(key, JSON.stringify(records.slice(0, 10)));
+            }
+        } else { alert("練習模式完成！"); }
+        location.reload();
+    }
+
+    initRanks();
+</script>
+</body>
+</html>
